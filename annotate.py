@@ -1,6 +1,7 @@
 from utils import *
 import argparse
 import sys
+import urllib
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -186,6 +187,18 @@ def neural_method(inputs, model):
     peakind = peakdet(res[0], 0.7)
     frames = map(int, [k for k,v in peakind[0]])
     return frames
+
+if not os.path.exists("models/FO.h5"):
+    print ("Model not found. Downloading...")
+    try:
+        os.makedirs("models")
+    except:
+        pass
+    model_path = "https://s3-eu-west-1.amazonaws.com/kidzinski/event-detector/FO.h5"
+    urllib.urlretrieve (model_path, "models/FO.h5")
+    model_path = "https://s3-eu-west-1.amazonaws.com/kidzinski/event-detector/HS.h5"
+    urllib.urlretrieve (model_path, "models/HS.h5")
+    print ("Model downloaded!")
 
 modelFO = load_model("models/FO.h5")
 modelHS = load_model("models/HS.h5")
