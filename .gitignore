@@ -1,0 +1,7 @@
+*~
+*.pyc
+*.csv
+*.c3d
+test
+models
+data
