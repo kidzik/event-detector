@@ -1,4 +1,4 @@
-from utils import *
+from eventdetector.utils import *
 import argparse
 import sys
 import urllib
@@ -188,38 +188,38 @@ def neural_method(inputs, model):
     frames = map(int, [k for k,v in peakind[0]])
     return frames
 
-if not os.path.exists("models/FO.h5"):
-    print ("Model not found. Downloading...")
-    try:
-        os.makedirs("models")
-    except:
-        pass
-    model_path = "https://s3-eu-west-1.amazonaws.com/kidzinski/event-detector/FO.h5"
-    urllib.urlretrieve (model_path, "models/FO.h5")
-    model_path = "https://s3-eu-west-1.amazonaws.com/kidzinski/event-detector/HS.h5"
-    urllib.urlretrieve (model_path, "models/HS.h5")
-    print ("Model downloaded!")
+def get_models():
+    if not os.path.exists("models/FO.h5"):
+        print ("Model not found. Downloading...")
+        try:
+            os.makedirs("models")
+        except:
+            pass
+        model_path = "https://s3-eu-west-1.amazonaws.com/kidzinski/event-detector/FO.h5"
+        urllib.urlretrieve (model_path, "models/FO.h5")
+        model_path = "https://s3-eu-west-1.amazonaws.com/kidzinski/event-detector/HS.h5"
+        urllib.urlretrieve (model_path, "models/HS.h5")
+        print ("Model downloaded!")
 
-modelFO = load_model("models/FO.h5")
-modelHS = load_model("models/HS.h5")
+    modelFO = load_model("models/FO.h5")
+    modelHS = load_model("models/HS.h5")
 
-idxL = [(i / 3) * 3 + i  for i in range(30)]
-idxR = [3 + (i / 3) * 3 + i  for i in range(30)]
+def process(events, filename_in, filename_out):
+    idxL = [(i / 3) * 3 + i  for i in range(30)]
+    idxR = [3 + (i / 3) * 3 + i  for i in range(30)]
 
-inputs = extract_kinematics('L', args.filename_in)
-inputsL = inputs[:, idxL]
-inputsR = inputs[:, idxR]
-XL, YL = convert_data(inputsL)
-XR, YR = convert_data(inputsR)
+    inputs = extract_kinematics('L', args.filename_in)
+    inputsL = inputs[:, idxL]
+    inputsR = inputs[:, idxR]
+    XL, YL = convert_data(inputsL)
+    XR, YR = convert_data(inputsR)
 
-events = {}
-events[("Foot Strike","Left")] = neural_method(XR, modelFO)
-events[("Foot Strike","Right")] = neural_method(XL, modelFO)
-events[("Foot Off","Left")] = neural_method(XR, modelHS)
-events[("Foot Off","Right")] = neural_method(XL, modelHS)
+    events = {}
+    events[("Foot Strike","Left")] = neural_method(XR, modelFO)
+    events[("Foot Strike","Right")] = neural_method(XL, modelFO)
+    events[("Foot Off","Left")] = neural_method(XR, modelHS)
+    events[("Foot Off","Right")] = neural_method(XL, modelHS)
 
-def save(events, filename_in, filename_out):
-    print (events, filename_in, filename_out)
     reader = btk.btkAcquisitionFileReader() 
     reader.SetFilename(filename_in)
     reader.Update()
@@ -247,5 +247,5 @@ def save(events, filename_in, filename_out):
 
     return
 
-save(events, args.filename_in, args.filename_out)
+process(events, args.filename_in, args.filename_out)
     

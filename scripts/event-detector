@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+import os
+import io
+import ConfigParser
+import os.path
+import argparse
+import urllib
+
+from eventdetector.annotate import process
+
+# Parse params
+parser = argparse.ArgumentParser(description='deepmri automatically annotates an MRI scan')
+parser.add_argument('directory_in', metavar='directory_in', help='directory with *.nii.gz files to process', default="in")
+parser.add_argument('directory_out', metavar='directory_out', help='directory for segmentation results', default="out")
+# parser.add_argument('--config', metavar='config', help='config file', default="")
+
+args = parser.parse_args()
+
+# Fill in the default config file
+config = ConfigParser.RawConfigParser(allow_no_value=True)
+
+config_str = DEFAULT_CONFIG.format(**vars(args))
+config.readfp(io.BytesIO(config_str))
+
+# Download the model if it doesn't exist
+# TODO: this is just one concrete model on a fixed location for now..
+if not os.path.exists("model_weights"):
+    print ("Model not found. Downloading...")
+    model_path = "https://s3-eu-west-1.amazonaws.com/kidzinski/deepmri/model_weights.h5"
+    urllib.urlretrieve (model_path, "model_weights")
+    print ("Model downloaded!")
+
+sess = session(config) # Do everything
+print(sess.test_output) # Print the test output, or 'None' if there was no test.
