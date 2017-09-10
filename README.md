@@ -5,7 +5,7 @@ This software annotate `.c3d` gait trajectories with Heel Strike and Foot Off ev
 ## Instalation
 
 ```python
-   pip install event-detector
+   pip install eventdetector
 ```
 
 ## Running
