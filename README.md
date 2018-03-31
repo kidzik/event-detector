@@ -1,6 +1,6 @@
 # event-detector
 
-This software annotates `.c3d` gait trajectories with Heel-Strike and Foot-Off events. It uses neural networks (more precisely Long Short Term Memory networks) through `keras` and `tensorflow` packages. The model is trained on the data from Gillette Children's Specialty Healthcare.
+This software annotates `.c3d` gait trajectories with Heel-Strike and Foot-Off events. It uses neural networks (more precisely Long Short Term Memory networks) through `keras` and `tensorflow` packages.
 
 ## Requirements
 
@@ -39,4 +39,4 @@ Enjoy!
 
 ## Credits 
 
-This research was sponsored by the Mobilize Center, a National Institutes of Health Big Data to Knowledge (BD2K) Center of Excellence supported through Grant U54EB020405.
+This research was sponsored by the Mobilize Center, a National Institutes of Health Big Data to Knowledge (BD2K) Center of Excellence supported through Grant U54EB020405. The model is trained on the data from Gillette Children's Specialty Healthcare, in accordance with the data sharing agreement.
