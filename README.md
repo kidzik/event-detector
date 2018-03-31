@@ -27,7 +27,7 @@ This will install `eventdetector` scripts with all required dependencies
 
 ## Running
 
-Navigate to a directory with `.c3d` files you wish to annotate with Heel-Strike and Foot-Off events. Then type
+Navigate Terminal or Command Prompt to a directory with `.c3d` files you wish to annotate with Heel-Strike and Foot-Off events. Then type
 
 ```bash
 event-detector [file-in.c3d] [file-out.c3d]
