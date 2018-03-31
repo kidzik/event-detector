@@ -4,7 +4,7 @@ This software annotates `.c3d` gait trajectories with Heel-Strike and Foot-Off e
 
 ## Requirements
 
-You only need `python`, all the dependencies will be installed automatically.
+You only need `python` and `btk` (https://pypi.python.org/pypi/btk), all other dependencies will be installed automatically.
 
 ### Linux, Mac OS
 
