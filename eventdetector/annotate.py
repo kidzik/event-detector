@@ -80,7 +80,7 @@ def extract_kinematics(leg, filename_in):
             traj[i] = acq.GetPoint(leg + v).GetValues() - midASI
             traj[len(markers) + i] = acq.GetPoint(opposite[leg] + v).GetValues() - midASI
         except:
-             print "Error while reading marker data: %d, %s" % (i,v)
+             print("Error while reading marker data: %d, %s" % (i,v))
              return
 
         traj[i][:,0] = traj[i][:,0] #* incrementX
