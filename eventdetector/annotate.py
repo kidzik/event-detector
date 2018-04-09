@@ -1,5 +1,4 @@
 from eventdetector.utils import *
-import argparse
 import sys
 import urllib
 
@@ -131,15 +130,6 @@ def extract_kinematics(leg, filename_in):
 #    print("Writig %s" % filename_out)
 #    np.savetxt(filename_out, arr, delimiter=',')
 
-parser = argparse.ArgumentParser(description='Annotate heel strike (HS) and foot off (FO) events.')
-parser.add_argument('filename_in', metavar='filename_in', help="A c3d file with kinematics", type=str)
-parser.add_argument('filename_out', metavar='filename_out', help="A c3d file to extract events to", type=str, default="out.c3d")
-
-# parser.add_argument('--method', '-m',
-#                     help="",
-#                     type=str, choices=['neural','velocity','coordinate'],default="neural")
-args = parser.parse_args()
-
 def convert_data(data):
     # TODO: temporary mess
     def derivative(traj):
@@ -201,14 +191,15 @@ def get_models():
         urllib.urlretrieve (model_path, "models/HS.h5")
         print ("Model downloaded!")
 
-    modelFO = load_model("models/FO.h5")
-    modelHS = load_model("models/HS.h5")
+get_models()
+modelFO = load_model("models/FO.h5")
+modelHS = load_model("models/HS.h5")
 
-def process(events, filename_in, filename_out):
+def process(filename_in, filename_out):
     idxL = [(i / 3) * 3 + i  for i in range(30)]
     idxR = [3 + (i / 3) * 3 + i  for i in range(30)]
 
-    inputs = extract_kinematics('L', args.filename_in)
+    inputs = extract_kinematics('L', filename_in)
     inputsL = inputs[:, idxL]
     inputsR = inputs[:, idxR]
     XL, YL = convert_data(inputsL)
@@ -247,5 +238,3 @@ def process(events, filename_in, filename_out):
 
     return
 
-process(events, args.filename_in, args.filename_out)
-    
