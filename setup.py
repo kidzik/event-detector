@@ -4,7 +4,7 @@ import os
 
 from setuptools import setup, find_packages
 
-__version__ = "0.9"
+__version__ = "0.9.1"
 
 setup(name='eventdetector',
       version=__version__,
