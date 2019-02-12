@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import sys
-sys.path.append("/usr/local/lib/python2.7/dist-packages")
-import btk
+#sys.path.append("/usr/local/lib/python2.7/dist-packages")
+#import btk
+from ezc3d import c3d
 import re
 import os
 import keras
@@ -15,23 +16,23 @@ from keras.models import load_model
 keras.losses.weighted_binary_crossentropy = weighted_binary_crossentropy
 
 def derivative(traj, nframes):
-    traj_der = traj[1:nframes,:] - traj[0:(nframes-1),:]
-    return np.append(traj_der, [[0,0,0]], axis=0)
+    traj_der = traj[:,1:nframes] - traj[:,0:(nframes-1)]
+    zeros = np.array([[0],[0],[0],[0]])
+    
+    return np.concatenate((traj_der, zeros),axis=1)
 
 def extract_kinematics(leg, filename_in):
     print("Trying %s" % (filename_in))
     
     # Open c3d and read data
-    reader = btk.btkAcquisitionFileReader() 
-    reader.SetFilename(filename_in)
-    reader.Update()
-    acq = reader.GetOutput()
-    nframes = acq.GetPointFrameNumber()
-    first_frame = acq.GetFirstFrame()
-
-    metadata = acq.GetMetaData()
-
-    rate = int(metadata.FindChild('POINT').value().FindChild('RATE').value().GetInfo().ToDouble()[0])
+    c = c3d(filename_in)
+#    reader = btk.btkAcquisitionFileReader() 
+#    reader.SetFilename(filename_in)
+#    reader.Update()
+#    acq = reader.GetOutput()
+    nframes = c['parameters']['POINT']['FRAMES']['value'][0]
+    first_frame = c['header']['points']['first_frame']
+    rate = int(c['parameters']['POINT']['RATE']['value'][0])
     if rate != 120:
         return
 
@@ -46,15 +47,19 @@ def extract_kinematics(leg, filename_in):
     # 3 * 3 = 9       extra trajectories
 
     outputs = np.array([[0] * nframes, [0] * nframes]).T
+
+    print(c['data']['points'])
+    print(c['data']['points'].shape)
+    print(len(c['parameters']['POINT']['LABELS']['value']))
+
+    labels = (c['parameters']['POINT']['LABELS']['value'])
+    print(nframes)
     
     # Check if there are any kinematics in the file
     brk = True
-    for point in btk.Iterate(acq.GetPoints()):
-        if point.GetLabel() == "L" + kinematics[0]:
-            brk = False
-            break
-
-    if brk:
+    try:
+        labels.index("L" + kinematics[0])
+    except ValueError:
         print("No kinematics in %s!" % (filename,))
         return
 
@@ -62,30 +67,34 @@ def extract_kinematics(leg, filename_in):
     opposite = {'L': 'R', 'R': 'L'}
     angles = [None] * (len(kinematics) * 2)
     for i, v in enumerate(kinematics):
-        point = acq.GetPoint(leg + v)
-        angles[i] = point.GetValues()
-        point = acq.GetPoint(opposite[leg] + v)
-        angles[len(kinematics) + i] = point.GetValues()
+        idx = labels.index(leg + v)
+        angles[i] = c['data']['points'][:,idx,:]
+        idx = labels.index(opposite[leg] + v)
+        angles[len(kinematics) + i] = c['data']['points'][:,idx,:]
     
     # Get the pelvis
-    LASI = acq.GetPoint("LASI").GetValues()
-    RASI = acq.GetPoint("RASI").GetValues()
+    idx = labels.index("LASI")
+    LASI = c['data']['points'][:,idx,:]
+    idx = labels.index("RASI")
+    RASI = c['data']['points'][:,idx,:]
     midASI = (LASI + RASI) / 2
     # incrementX = 1 if midASI[100][0] > midASI[0][0] else -1
 
     traj = [None] * (len(markers) * 4 + 3)
     for i, v in enumerate(markers):
         try:
-            traj[i] = acq.GetPoint(leg + v).GetValues() - midASI
-            traj[len(markers) + i] = acq.GetPoint(opposite[leg] + v).GetValues() - midASI
-        except:
-             print("Error while reading marker data: %d, %s" % (i,v))
+            idx = labels.index(leg + v)
+            traj[i] = c['data']['points'][:,idx,:] - midASI
+            idx = labels.index(opposite[leg] + v)
+            traj[len(markers) + i] = c['data']['points'][:,idx,:] - midASI
+        except ValueError:
+             print("Error while reading marker data %d, %s: No marker %s" % (i,v,v))
              return
 
-        traj[i][:,0] = traj[i][:,0] #* incrementX
-        traj[len(markers) + i][:,0] = traj[len(markers) + i][:,0] #* incrementX
-        traj[i][:,2] = traj[i][:,2] #* incrementX
-        traj[len(markers) + i][:,2] = traj[len(markers) + i][:,2] #* incrementX
+        traj[i][0,:] = traj[i][0,:] #* incrementX
+        traj[len(markers) + i][0,:] = traj[len(markers) + i][0,:] #* incrementX
+        traj[i][2,:] = traj[i][2,:] #* incrementX
+        traj[len(markers) + i][2,:] = traj[len(markers) + i][2,:] #* incrementX
 
     for i in range(len(markers)*2):
         traj[len(markers)*2 + i] = derivative(traj[i], nframes) 
@@ -99,31 +108,51 @@ def extract_kinematics(leg, filename_in):
     traj[len(markers)*4 + 1] = midASIvel
     traj[len(markers)*4 + 2] = midASIacc
 
+    print(angles)
+    print(traj)
     curves = np.concatenate(angles + traj, axis=1)
 
     # Plot each component of the big array
     # for i in range(3 * len(kinematics)):
     #     plt.plot(range(nframes), curves[:,i])
 
+    import pprint
+    pprint.pprint(list(c))
+    pprint.pprint(c['header']['events']['size'])
+    pprint.pprint(list(c['header']['events']['events_time']))
+    pprint.pprint(list(c['header']['events']['events_label']))
+    pprint.pprint(list(c['data']['points']))
+    pprint.pprint(list(c['parameters']))
+    pprint.pprint(list(c['parameters']['EVENT']))
+    pprint.pprint(list(c['parameters']['EVENT']['LABELS']['value']))
+    pprint.pprint(list(c['parameters']['EVENT']['CONTEXTS']['value']))
+#    pprint.pprint(list(c))
+    
     # Add events as output
-    for event in btk.Iterate(acq.GetEvents()):
-        if event.GetFrame() >= nframes:
+    for eventid in range(c['header']['events']['size']):
+#        event in btk.Iterate(acq.GetEvents()):
+        eventtime = float(c['parameters']['EVENT']['TIMES']['value'][1 + eventid * 2])
+        eventframe = int(eventtime * rate)
+        if eventframe  >= nframes:
             print("Event happened too far")
-            return
-        if len(event.GetContext()) == 0:
-            print("No events")
-            return
+            break
+        # if len(event.GetContext()) == 0:
+        #     print("No events")
+        #     break
 #        if event.GetContext()[0] == leg:
-        if event.GetLabel() == "Foot Strike":
-            outputs[event.GetFrame() -first_frame, 0] = 1
-        elif event.GetLabel() == "Foot Off":
-            outputs[event.GetFrame() - first_frame, 1] = 1
-        print(event.GetLabel(), event.GetContext(), event.GetFrame(), event.GetFrame() - first_frame)
+        label = c['parameters']['EVENT']['LABELS']['value'][eventid]
+        if label == "Foot Strike":
+            outputs[eventframe, 0] = 1
+        elif label == "Foot Off":
+            outputs[eventframe, 1] = 1
+        print("Event %s in frame %d time %f" % (label, eventframe, eventtime))
             
     if (np.sum(outputs) == 0):
         print("No events in %s!" % (filename,))
         return
 
+    print(curves.shape)
+    print(outputs.shape)
     arr = np.concatenate((curves, outputs), axis=1)
 
     return arr
@@ -211,30 +240,33 @@ def process(filename_in, filename_out):
     events[("Foot Off","Left")] = neural_method(XR, modelHS)
     events[("Foot Off","Right")] = neural_method(XL, modelHS)
 
-    reader = btk.btkAcquisitionFileReader() 
-    reader.SetFilename(filename_in)
-    reader.Update()
-    acq = reader.GetOutput()
-    first_frame = acq.GetFirstFrame()
-    acq.ClearEvents()
-    print(first_frame)
+    import pprint
+    pprint.pprint(events)
+    # TODO
+    # reader = btk.btkAcquisitionFileReader() 
+    # reader.SetFilename(filename_in)
+    # reader.Update()
+    # acq = reader.GetOutput()
+    # first_frame = acq.GetFirstFrame()
+    # acq.ClearEvents()
+    # print(first_frame)
 
-    for k,v in events.items():
-        for frame in v:
-            frame_true = first_frame + frame
-            fps = 120.0
-            event = btk.btkEvent()
-            event.SetLabel(k[0])
-            event.SetContext(k[1])
-            event.SetId(2 - (k[0] == "Foot Strike"))
-            event.SetFrame(np.round(frame_true))
-            event.SetTime(frame_true/fps)
-            acq.AppendEvent(event)
+    # for k,v in events.items():
+    #     for frame in v:
+    #         frame_true = first_frame + frame
+    #         fps = 120.0
+    #         event = btk.btkEvent()
+    #         event.SetLabel(k[0])
+    #         event.SetContext(k[1])
+    #         event.SetId(2 - (k[0] == "Foot Strike"))
+    #         event.SetFrame(np.round(frame_true))
+    #         event.SetTime(frame_true/fps)
+    #         acq.AppendEvent(event)
     
-    writer = btk.btkAcquisitionFileWriter() 
-    writer.SetInput(acq)
-    writer.SetFilename(filename_out)
-    writer.Update()
+    # writer = btk.btkAcquisitionFileWriter() 
+    # writer.SetInput(acq)
+    # writer.SetFilename(filename_out)
+    # writer.Update()
 
     return
 
